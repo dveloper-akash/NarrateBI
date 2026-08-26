@@ -1,6 +1,6 @@
 """NarrateBI - Main Streamlit Application
 
-A clean, modern B2B SaaS Analytics prototype for AI-powered KPI root-cause diagnostics.
+A clean, high-contrast B2B SaaS Analytics prototype for AI-powered KPI root-cause diagnostics.
 """
 
 import sys
@@ -27,127 +27,149 @@ from ai.narrative import generate_narrative
 # Page Configuration
 st.set_page_config(
     page_title="NarrateBI | Diagnostic Intelligence",
-    page_icon="📊",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-# Enterprise Minimal Custom Styling
+# High-Contrast Enterprise Styling (Visible on both Light & Dark themes)
 st.markdown(
     """
     <style>
-    /* Base SaaS Styling */
+    /* Global Reset & Typography */
     .stApp {
         background-color: #F8FAFC;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        color: #0F172A;
     }
     
-    /* Top Navbar */
-    .header-bar {
-        background: #FFFFFF;
-        border-bottom: 1px solid #E2E8F0;
-        padding: 16px 24px;
-        margin-bottom: 24px;
-        border-radius: 8px;
+    /* Top Header */
+    .brand-title {
+        font-size: 26px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0;
         display: flex;
-        justify-content: space-between;
         align-items: center;
+        gap: 8px;
     }
-    
-    /* KPI Card */
+    .brand-subtitle {
+        color: #475569;
+        font-size: 13px;
+        font-weight: 500;
+        margin-top: 2px;
+    }
+
+    /* KPI Cards */
     .kpi-card {
         background: #FFFFFF;
         border: 1px solid #E2E8F0;
-        border-radius: 8px;
+        border-radius: 10px;
         padding: 16px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-        transition: border-color 0.2s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        transition: transform 0.15s ease, border-color 0.15s ease;
     }
     .kpi-card:hover {
-        border-color: #CBD5E1;
+        border-color: #3B82F6;
+        transform: translateY(-1px);
     }
     .kpi-title {
-        font-size: 13px;
-        font-weight: 600;
-        color: #64748B;
+        font-size: 12px;
+        font-weight: 700;
+        color: #475569;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.6px;
     }
     .kpi-val {
         font-size: 24px;
-        font-weight: 700;
+        font-weight: 800;
         color: #0F172A;
-        margin: 4px 0;
+        margin: 4px 0 8px 0;
     }
     .badge-neg {
         background: #FEE2E2;
-        color: #991B1B;
-        padding: 2px 8px;
-        border-radius: 4px;
+        color: #DC2626;
+        padding: 3px 8px;
+        border-radius: 6px;
         font-size: 12px;
-        font-weight: 600;
+        font-weight: 700;
+        display: inline-block;
     }
     .badge-pos {
         background: #DCFCE7;
-        color: #166534;
-        padding: 2px 8px;
-        border-radius: 4px;
+        color: #16A34A;
+        padding: 3px 8px;
+        border-radius: 6px;
         font-size: 12px;
-        font-weight: 600;
+        font-weight: 700;
+        display: inline-block;
     }
     .badge-neutral {
         background: #F1F5F9;
         color: #475569;
-        padding: 2px 8px;
-        border-radius: 4px;
+        padding: 3px 8px;
+        border-radius: 6px;
         font-size: 12px;
-        font-weight: 600;
+        font-weight: 700;
+        display: inline-block;
     }
     
-    /* Section Panels */
+    /* Panels */
     .panel-card {
         background: #FFFFFF;
         border: 1px solid #E2E8F0;
-        border-radius: 8px;
+        border-radius: 10px;
         padding: 20px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.03);
         margin-bottom: 20px;
     }
     .panel-header {
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 700;
-        color: #1E293B;
+        color: #2563EB;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
         border-bottom: 1px solid #F1F5F9;
-        padding-bottom: 10px;
+        padding-bottom: 8px;
         margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
     
-    /* Source Tags */
+    /* Colorful Evidence Badges */
     .source-tag {
         font-size: 11px;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-weight: 600;
-        margin-right: 6px;
+        padding: 3px 8px;
+        border-radius: 5px;
+        font-weight: 700;
+        margin-right: 8px;
+        display: inline-block;
     }
-    .source-tag-payments { background: #E0E7FF; color: #3730A3; }
-    .source-tag-deployment { background: #FEF3C7; color: #92400E; }
-    .source-tag-incidents { background: #FCE7F3; color: #9D174D; }
-    .source-tag-support { background: #CFFAFE; color: #155E75; }
-    .source-tag-operations { background: #F1F5F9; color: #334155; }
-    
+    .source-tag-payments { background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE; }
+    .source-tag-deployment { background: #FEF3C7; color: #D97706; border: 1px solid #FDE68A; }
+    .source-tag-incidents { background: #FCE7F3; color: #DB2777; border: 1px solid #FBCFE8; }
+    .source-tag-support { background: #E0F2FE; color: #0284C7; border: 1px solid #BAE6FD; }
+    .source-tag-operations { background: #F3E8FF; color: #9333EA; border: 1px solid #E9D5FF; }
+
     /* Telemetry Footer */
     .telemetry-bar {
-        background: #F8FAFC;
-        border-top: 1px solid #E2E8F0;
-        padding: 12px 16px;
-        font-size: 12px;
-        color: #64748B;
+        background: #1E293B;
+        color: #F8FAFC;
+        border-radius: 8px;
+        padding: 12px 18px;
+        font-size: 13px;
         display: flex;
         justify-content: space-between;
-        margin-top: 30px;
-        border-radius: 6px;
+        margin-top: 24px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .telemetry-item {
+        color: #94A3B8;
+    }
+    .telemetry-item b {
+        color: #38BDF8;
     }
     </style>
     """,
@@ -170,37 +192,36 @@ def record_feedback(scenario_id: str, kpi_key: str, rating: str, persona: str):
                     (scenario_id, kpi_key, rating, persona),
                 )
                 conn.commit()
-            st.toast("Thank you for your feedback!", icon="✅")
+            st.toast("Feedback recorded successfully!", icon="✅")
         except Exception:
             pass
 
 
 def load_scenarios() -> Dict[str, Any]:
-    """Loads all test scenarios from scenarios/ directory."""
-    scenarios = {
+    """Loads all test scenarios."""
+    return {
         "scenario_1_multifactor": "Multi-factor Diagnosis (Payment Service Incident)",
         "scenario_2_low_confidence": "Low Confidence / Missing Evidence (Abstention)",
         "scenario_3_new_kpi": "New KPI / Limited Baseline (Cold Start)",
         "scenario_4_rbac": "Role-Based Access (RBAC) Demonstration",
         "scenario_5_contradiction": "Contradictory Signals Analysis",
     }
-    return scenarios
 
 
 def main():
-    # 1. Top Navigation Bar & Controls
+    # 1. Top Navbar
     col_nav1, col_nav2, col_nav3 = st.columns([3, 2, 2])
 
     with col_nav1:
-        st.markdown("### 📊 NarrateBI")
-        st.caption("Deterministic Diagnostic Intelligence & AI Narratives")
+        st.markdown('<div class="brand-title">⚡ NarrateBI</div>', unsafe_allow_html=True)
+        st.markdown('<div class="brand-subtitle">Diagnostic Root-Cause Engine & AI Narratives</div>', unsafe_allow_html=True)
 
     with col_nav2:
         persona = st.selectbox(
-            "Active Persona / View",
+            "Active Persona / Role",
             options=["Executive", "Engineer"],
             index=0,
-            help="Switch between business leadership narrative and technical infrastructure telemetry.",
+            help="Switch between Executive (business impact) and Engineer (technical telemetry).",
         )
 
     scenarios = load_scenarios()
@@ -210,33 +231,25 @@ def main():
             options=list(scenarios.keys()),
             format_func=lambda x: scenarios[x],
             index=0,
-            help="Feeds different baseline conditions through the same deterministic pipeline.",
+            help="Selects underlying operational and KPI scenario datasets.",
         )
 
     st.divider()
 
-    # 2. Pipeline Execution
+    # 2. Pipeline Execution: Fetch KPIs
     kpis = fetch_kpis_for_scenario(scenario_key)
     if not kpis:
-        # Fallback evaluation for preview if database not yet seeded
-        contracts = load_kpi_contracts()
-        kpis = [
-            fetch_fallback_kpi("revenue", 4420000.0, 5000000.0, contracts),
-            fetch_fallback_kpi("orders", 4210.0, 5000.0, contracts),
-            fetch_fallback_kpi("conversion_rate", 4.21, 5.0, contracts),
-            fetch_fallback_kpi("sessions", 100000.0, 100000.0, contracts),
-            fetch_fallback_kpi("aov", 1050.0, 1000.0, contracts),
-        ]
+        st.error("No KPI records found. Please run `python database/seed.py`.", icon="🚨")
+        return
 
     kpi_map = {k.key: k for k in kpis}
 
     # 3. KPI Header Row
-    st.markdown("##### 📈 Monitored KPI Health")
+    st.markdown("##### 📈 Monitored Business KPIs")
     kpi_cols = st.columns(len(kpis))
 
     for idx, kpi in enumerate(kpis):
         with kpi_cols[idx]:
-            # Format value
             if kpi.unit == "INR":
                 val_str = f"₹{kpi.current_value / 100000:.1f}L"
             elif kpi.unit == "%":
@@ -244,13 +257,12 @@ def main():
             else:
                 val_str = f"{int(kpi.current_value):,}"
 
-            # Delta format
             if kpi.is_cold_start:
                 delta_html = '<span class="badge-neutral">Cold Start (< 14d)</span>'
             elif kpi.change_pct < 0:
-                delta_html = f'<span class="badge-neg">↓ {abs(kpi.change_pct)}%</span>'
+                delta_html = f'<span class="badge-neg">↓ {abs(kpi.change_pct):.1f}%</span>'
             elif kpi.change_pct > 0:
-                delta_html = f'<span class="badge-pos">↑ {kpi.change_pct}%</span>'
+                delta_html = f'<span class="badge-pos">↑ {kpi.change_pct:.1f}%</span>'
             else:
                 delta_html = '<span class="badge-neutral">0.0% (Stable)</span>'
 
@@ -265,18 +277,18 @@ def main():
                 unsafe_allow_html=True,
             )
 
-            with st.popover("ℹ️ Definition"):
+            with st.popover("📘 Definition & Lineage"):
                 st.markdown(f"**{kpi.name}**")
                 st.markdown(f"- **Definition:** {kpi.metadata.definition}")
                 st.markdown(f"- **Formula:** `{kpi.metadata.formula}`")
-                st.markdown(f"- **Source:** {kpi.metadata.source}")
-                st.markdown(f"- **Refresh:** {kpi.metadata.refresh}")
+                st.markdown(f"- **Source:** `{kpi.metadata.source}`")
+                st.markdown(f"- **Refresh Rate:** `{kpi.metadata.refresh}`")
                 st.markdown(f"- **Lineage:** `{kpi.metadata.lineage}`")
-                st.markdown(f"- **Anomaly Threshold:** ±{kpi.metadata.threshold}%")
+                st.markdown(f"- **Anomaly Threshold:** `±{kpi.metadata.threshold}%`")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # 4. Cold Start Check
+    # 4. Cold Start Banner
     cold_start_kpi = next((k for k in kpis if k.is_cold_start), None)
     if cold_start_kpi:
         st.warning(
@@ -284,7 +296,7 @@ def main():
             icon="⏳",
         )
 
-    # 5. Deterministic Driver Analysis
+    # 5. Deterministic Driver Decomposition
     driver_res = analyze_revenue_drivers(kpi_map)
     primary_driver_name = driver_res.primary_driver if driver_res else "Conversion Rate"
     primary_driver_contrib = driver_res.primary_contribution if driver_res else 76.0
@@ -297,7 +309,6 @@ def main():
     # 7. Deterministic Confidence Scoring
     has_sufficient_history = not bool(cold_start_kpi)
     if scenario_key == "scenario_2_low_confidence":
-        # Force low operational evidence to trigger abstention
         confidence_result = calculate_confidence(primary_driver_contribution=50.0, evidence_items=[], has_sufficient_history=True)
     else:
         confidence_result = calculate_confidence(
@@ -306,7 +317,7 @@ def main():
             has_sufficient_history=has_sufficient_history,
         )
 
-    # 8. AI Narrative Generation
+    # 8. Persona AI Narrative Generation
     evidence_desc = [e.description for e in combined_evidence]
     target_kpi = kpi_map.get("revenue", kpis[0])
 
@@ -322,17 +333,17 @@ def main():
         should_abstain=confidence_result.should_abstain,
     )
 
-    # 9. Main Grid: Insight vs. Evidence & Confidence
+    # 9. Main Grid
     col_left, col_right = st.columns([7, 5])
 
     with col_left:
-        # Main Insight Card
+        # Diagnostic Narrative Card
         st.markdown(
             f"""
             <div class="panel-card">
-                <div class="panel-header">🎯 Diagnostic Narrative ({persona} View)</div>
-                <h4 style="margin-top:0; color:#0F172A;">{narrative.get('summary', 'Diagnosis Summary')}</h4>
-                <p style="color:#334155; font-size:14px;">
+                <div class="panel-header">🎯 Diagnostic Narrative ({persona} Perspective)</div>
+                <h4 style="margin-top:0; color:#0F172A;">{narrative.get('summary', 'Diagnostic Summary')}</h4>
+                <p style="color:#334155; font-size:14px; line-height:1.5;">
                     {narrative.get('reason', narrative.get('technical_diagnosis', ''))}
                 </p>
             </div>
@@ -340,7 +351,7 @@ def main():
             unsafe_allow_html=True,
         )
 
-        # Driver Contribution Panel
+        # Deterministic Driver Breakdown
         st.markdown('<div class="panel-card"><div class="panel-header">⚖️ Deterministic Driver Breakdown</div>', unsafe_allow_html=True)
         if driver_res:
             for d in driver_res.drivers:
@@ -351,15 +362,27 @@ def main():
                     st.progress(min(1.0, max(0.0, d.contribution_pct / 100.0)))
                 with c3:
                     st.write(f"**{d.contribution_pct}%**")
+
+            # Show Sub-driver Level 2 if present
+            if driver_res.sub_driver_result:
+                st.caption(f"↳ **Sub-Factor Decomposition for {driver_res.sub_driver_result.target_kpi}:**")
+                for sd in driver_res.sub_driver_result.drivers:
+                    sc1, sc2, sc3 = st.columns([4, 6, 2])
+                    with sc1:
+                        st.write(f"&nbsp;&nbsp;• {sd.name}")
+                    with sc2:
+                        st.progress(min(1.0, max(0.0, sd.contribution_pct / 100.0)))
+                    with sc3:
+                        st.write(f"{sd.contribution_pct}%")
         st.markdown("</div>", unsafe_allow_html=True)
 
         # Recommendation Card
         rec_text = narrative.get("recommendation", narrative.get("technical_recommendation", "Continue monitoring system metrics."))
         st.markdown(
             f"""
-            <div class="panel-card" style="border-left: 4px solid #2563EB;">
+            <div class="panel-card" style="border-left: 5px solid #2563EB;">
                 <div class="panel-header" style="color:#2563EB;">💡 Recommended Action</div>
-                <div style="font-size:14px; font-weight:500; color:#1E293B;">{rec_text}</div>
+                <div style="font-size:14px; font-weight:600; color:#1E293B; line-height:1.4;">{rec_text}</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -374,7 +397,7 @@ def main():
         st.markdown(
             f"""
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <span style="font-size:26px; font-weight:800; color:{conf_color};">{confidence_result.score}%</span>
+                <span style="font-size:28px; font-weight:800; color:{conf_color};">{confidence_result.score}%</span>
                 <span style="font-size:13px; font-weight:700; color:{conf_color}; text-transform:uppercase;">{confidence_result.level} Confidence</span>
             </div>
             """,
@@ -383,13 +406,13 @@ def main():
         st.progress(confidence_result.score / 100.0)
 
         if confidence_result.should_abstain:
-            st.error("⚠️ **System Abstaining**: Confidence is below the 45% threshold. NarrateBI avoids hallucinations by requesting missing operational data instead of guessing.", icon="🛑")
+            st.error("⚠️ **System Abstaining**: Diagnostic confidence is below the 45% threshold. NarrateBI avoids hallucinations by requiring missing operational logs instead of guessing.", icon="🛑")
             if confidence_result.missing_evidence_hints:
-                st.markdown("**Required Evidence:**")
+                st.markdown("**Required Evidence for Confirmation:**")
                 for hint in confidence_result.missing_evidence_hints:
                     st.markdown(f"- {hint}")
         else:
-            st.markdown("**Confidence Factors:**")
+            st.markdown("**Corroborating Confidence Factors:**")
             for factor in confidence_result.factors:
                 st.markdown(f"✓ {factor}")
 
@@ -397,7 +420,7 @@ def main():
 
         # Supporting Evidence Panel
         st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-        st.markdown('<div class="panel-header">📑 Corroborating Evidence</div>', unsafe_allow_html=True)
+        st.markdown('<div class="panel-header">📑 Corroborating Operational Evidence</div>', unsafe_allow_html=True)
 
         if not combined_evidence:
             st.info("No operational evidence items linked to this scenario.")
@@ -424,9 +447,9 @@ def main():
         st.caption("⚙️ **Architecture Transparency**")
         st.markdown(
             """
-            - **Deterministic Engine:** KPI Delta Calculation • Anomaly Thresholds • Parent-Child Driver Contribution • Confidence Scoring
-            - **RAG Context Layer:** ChromaDB Semantic Document Index (Incidents, Deployments, Server Logs)
-            - **LLM Reasoning Layer:** Grounded Persona Explanations & Action Formulation (`gemini-2.5-flash` / Grounded Fallback)
+            - **Deterministic Math Layer:** KPI Δ% • Anomaly Thresholds • Hierarchical Driver Variance • Confidence Scoring
+            - **RAG Context Layer:** ChromaDB Document Retrieval (Incidents, Deployments, Server Logs)
+            - **Generative AI Layer:** Persona Explanation Grounding (`gemini-2.5-flash` / Grounded Fallback)
             """
         )
 
@@ -445,20 +468,14 @@ def main():
     st.markdown(
         f"""
         <div class="telemetry-bar">
-            <span>⚡ Execution Latency: <b>{telemetry.get('latency_ms', 820)} ms</b></span>
-            <span>🪙 Token Count: <b>{telemetry.get('tokens', 320)}</b></span>
-            <span>💵 Est. AI Cost: <b>${telemetry.get('estimated_cost_usd', 0.0002):.5f}</b></span>
-            <span>🔒 Mode: <b>{telemetry.get('mode', 'grounded')}</b></span>
+            <span class="telemetry-item">⚡ Latency: <b>{telemetry.get('latency_ms', 820)} ms</b></span>
+            <span class="telemetry-item">🪙 Tokens: <b>{telemetry.get('tokens', 320)}</b></span>
+            <span class="telemetry-item">💵 Est. AI Cost: <b>${telemetry.get('estimated_cost_usd', 0.0002):.5f}</b></span>
+            <span class="telemetry-item">🔒 Mode: <b>{telemetry.get('mode', 'grounded')}</b></span>
         </div>
         """,
         unsafe_allow_html=True,
     )
-
-
-def fetch_fallback_kpi(key: str, curr: float, base: float, contracts: Dict[str, Any]) -> KPIResult:
-    """Fallback helper when database is empty."""
-    from engine.kpi_engine import evaluate_kpi
-    return evaluate_kpi(key, curr, base, history_days=30, contracts=contracts)
 
 
 if __name__ == "__main__":

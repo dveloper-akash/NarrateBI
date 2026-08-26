@@ -1,11 +1,12 @@
 """RAG Retrieval Module
 
-Provides a simple interface: retrieve_evidence(query, top_k=5)
+Provides a simple, reliable interface:
+retrieve_evidence(query, top_k=4, category=None)
 returning a list of relevant operational evidence objects.
 """
 
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import json
 from engine.evidence import EvidenceItem
 
@@ -13,8 +14,12 @@ INDEX_FILE = Path(__file__).resolve().parent / "index_manifest.json"
 CHROMA_DIR = Path(__file__).resolve().parent / "chroma_db"
 
 
-def retrieve_evidence(query: str, top_k: int = 4) -> List[EvidenceItem]:
-    """Retrieves top relevant operational evidence documents for the query."""
+def retrieve_evidence(
+    query: str,
+    top_k: int = 4,
+    category: Optional[str] = None,
+) -> List[EvidenceItem]:
+    """Retrieves top relevant operational evidence documents matching the query."""
     results: List[EvidenceItem] = []
 
     # 1. Attempt ChromaDB vector retrieval
@@ -23,20 +28,37 @@ def retrieve_evidence(query: str, top_k: int = 4) -> List[EvidenceItem]:
         if CHROMA_DIR.exists():
             client = chromadb.PersistentClient(path=str(CHROMA_DIR))
             collection = client.get_collection(name="operational_evidence")
-            query_res = collection.query(query_texts=[query], n_results=top_k)
+            where_clause = {"category": category} if category else None
+            
+            query_res = collection.query(
+                query_texts=[query],
+                n_results=top_k,
+                where=where_clause,
+            )
             
             docs = query_res.get("documents", [[]])[0]
             metas = query_res.get("metadatas", [[]])[0]
 
             for doc_text, meta in zip(docs, metas):
-                category = meta.get("category", "Operations").capitalize()
-                lines = [l.strip() for l in doc_text.splitlines() if l.strip()]
-                title = lines[0] if lines else "Operational note"
+                cat = meta.get("category", "operations").capitalize()
+                title = meta.get("title", "Operational Log")
+                timestamp = meta.get("timestamp", "Recent")
+                
+                # Extract first substantive bullet or line
+                summary_line = ""
+                for line in doc_text.splitlines():
+                    clean_line = line.strip().lstrip("#-* ").strip()
+                    if clean_line and clean_line != title and not clean_line.startswith("**"):
+                        summary_line = clean_line
+                        break
+                
+                desc = f"{title}: {summary_line}" if summary_line else title
+
                 results.append(
                     EvidenceItem(
-                        source=category,
-                        timestamp="Recent",
-                        description=f"{title.replace('#', '').strip()}: {lines[1] if len(lines) > 1 else ''}",
+                        source=cat,
+                        timestamp=timestamp,
+                        description=desc,
                         relevance="High",
                         is_structured=False,
                     )
@@ -46,30 +68,57 @@ def retrieve_evidence(query: str, top_k: int = 4) -> List[EvidenceItem]:
     except Exception:
         pass
 
-    # 2. Fallback to manifest keyword search
+    # 2. Resilient Manifest Search (Ranked TF matching)
     if INDEX_FILE.exists():
         with open(INDEX_FILE, "r", encoding="utf-8") as f:
-            manifest = json.load(f)
-        
-        q_lower = query.lower()
+            manifest: List[Dict[str, Any]] = json.load(f)
+
+        query_tokens = [t.lower() for t in query.replace("-", " ").replace("_", " ").split() if len(t) > 2]
         scored_docs = []
+
         for doc in manifest:
+            if category and doc.get("category") != category:
+                continue
+
             content = doc.get("content", "").lower()
-            score = sum(1 for word in q_lower.split() if word in content)
-            scored_docs.append((score, doc))
+            title = doc.get("title", "").lower()
+            service = doc.get("service", "").lower()
+
+            score = 0
+            for token in query_tokens:
+                if token in title:
+                    score += 5
+                if token in service:
+                    score += 4
+                if token in content:
+                    score += 1
+
+            if score > 0 or not query_tokens:
+                scored_docs.append((score, doc))
 
         scored_docs.sort(key=lambda x: x[0], reverse=True)
 
         for _, doc in scored_docs[:top_k]:
-            category = doc.get("category", "Operations").capitalize()
-            content_lines = [l.strip() for l in doc.get("content", "").splitlines() if l.strip()]
-            summary = content_lines[0].replace("#", "").strip() if content_lines else doc.get("filename", "")
+            cat = doc.get("category", "operations").capitalize()
+            title = doc.get("title", "Operational Note")
+            timestamp = doc.get("timestamp", "Recent")
+            
+            # Find representative summary line
+            summary_line = ""
+            for line in doc.get("content", "").splitlines():
+                clean = line.strip().lstrip("#-* ").strip()
+                if clean and clean != title and not clean.startswith("**"):
+                    summary_line = clean
+                    break
+            
+            desc = f"{title}: {summary_line}" if summary_line else title
+
             results.append(
                 EvidenceItem(
-                    source=category,
-                    timestamp="Recent",
-                    description=summary,
-                    relevance="High",
+                    source=cat,
+                    timestamp=timestamp,
+                    description=desc,
+                    relevance="High" if _ > 2 else "Medium",
                     is_structured=False,
                 )
             )
