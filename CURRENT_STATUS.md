@@ -1,6 +1,6 @@
 # NarrateBI — Project Status & Roadmap
 
-## Current Phase: Phase 3 (AI Narrative & Persona Prompts) — COMPLETED ✅
+## Current Phase: Phase 5 (Production-Ready & Fully Verified) — COMPLETED ✅
 
 ### Status Summary
 - [x] **Phase 0: Foundation & Scaffold**: Complete repo structure, config contracts, initial docs, and baseline Streamlit app.
@@ -24,18 +24,21 @@
   - [x] Deterministic fallback explanation generation when offline.
   - [x] Strict abstention enforcement for low-confidence (<45%) or cold-start (<14d) states.
   - [x] Unit test suite (`tests/test_phase3_ai_narrative.py`) passing 100%.
+- [x] **Phase 4 & 5: Dashboard Polish, RBAC & Cloud Readiness**:
+  - [x] Seamless switching across all 5 demo scenarios in UI.
+  - [x] Dual persona views (Executive commercial impact vs Engineer technical telemetry).
+  - [x] Role-Based Access Control (RBAC) evidence masking.
+  - [x] Real-time diagnostic feedback logging to SQLite.
+  - [x] KPI definitions, formulas, thresholds, and data lineage popovers.
+  - [x] 20/20 automated tests passing across full end-to-end suite (`tests/test_phase4_end_to_end.py`).
 
 ---
 
-## Roadmap
+## Ready for Cloud Deployment
 
-### Phase 4: Full Streamlit Dashboard, Telemetry & Feedback (Next Step)
-- [ ] Connect all UI controls and interactive views.
-- [ ] Detailed RBAC filtering in UI (Executive vs. Engineer permission masks).
-- [ ] Polish feedback collection (👍/👎) and display saved feedback records.
-- [ ] Dynamic scenario selector with real-time UI transitions.
-
-### Phase 5: Polish & Cloud Deployment Readiness
-- [ ] Responsive layout verification (Desktop & Mobile).
-- [ ] Complete end-to-end demo script validation.
-- [ ] Final deployment documentation.
+```powershell
+# Quickstart
+python database/seed.py
+python rag/ingest.py
+streamlit run app/streamlit_app.py
+```

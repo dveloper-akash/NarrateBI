@@ -32,11 +32,11 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# High-Contrast Enterprise Styling (Visible on both Light & Dark themes)
+# High-Contrast Enterprise Styling (Theme-Adaptive)
 st.markdown(
     """
     <style>
-    /* Global Reset & Typography */
+    /* Base SaaS Styling */
     .stApp {
         background-color: #F8FAFC;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -138,6 +138,17 @@ st.markdown(
         gap: 8px;
     }
     
+    /* RBAC Tag */
+    .rbac-badge {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: #EFF6FF;
+        color: #1D4ED8;
+        border: 1px solid #BFDBFE;
+    }
+
     /* Colorful Evidence Badges */
     .source-tag {
         font-size: 11px;
@@ -197,6 +208,34 @@ def record_feedback(scenario_id: str, kpi_key: str, rating: str, persona: str):
             pass
 
 
+def get_recent_feedback() -> List[Dict[str, Any]]:
+    """Fetches recent feedback submissions from SQLite."""
+    db_path = PROJECT_ROOT / "database" / "narratebi.db"
+    items = []
+    if db_path.exists():
+        try:
+            with sqlite3.connect(db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT scenario_id, kpi_key, rating, persona, created_at
+                    FROM feedback
+                    ORDER BY id DESC LIMIT 5
+                    """
+                )
+                for r in cursor.fetchall():
+                    items.append({
+                        "scenario": r[0],
+                        "kpi": r[1],
+                        "rating": "👍 Helpful" if r[2] == "up" else "👎 Inaccurate",
+                        "persona": r[3],
+                        "timestamp": r[4],
+                    })
+        except Exception:
+            pass
+    return items
+
+
 def load_scenarios() -> Dict[str, Any]:
     """Loads all test scenarios."""
     return {
@@ -206,6 +245,14 @@ def load_scenarios() -> Dict[str, Any]:
         "scenario_4_rbac": "Role-Based Access (RBAC) Demonstration",
         "scenario_5_contradiction": "Contradictory Signals Analysis",
     }
+
+
+def filter_evidence_by_rbac(evidence: List[EvidenceItem], persona: str) -> List[EvidenceItem]:
+    """Filters evidence items according to role access policies."""
+    if persona.lower() == "engineer":
+        return evidence
+    # Executive persona: Filter out raw internal server debug logs
+    return [e for e in evidence if not (e.source == "Operations" and "[" in e.description)]
 
 
 def main():
@@ -305,6 +352,7 @@ def main():
     query_context = "payment gateway timeout errors and checkout failure deployment"
     unstructured_evidence = retrieve_evidence(query_context) if scenario_key != "scenario_2_low_confidence" else []
     combined_evidence = get_combined_evidence(scenario_key, unstructured_evidence)
+    filtered_evidence = filter_evidence_by_rbac(combined_evidence, persona)
 
     # 7. Deterministic Confidence Scoring
     has_sufficient_history = not bool(cold_start_kpi)
@@ -318,7 +366,7 @@ def main():
         )
 
     # 8. Persona AI Narrative Generation
-    evidence_desc = [e.description for e in combined_evidence]
+    evidence_desc = [e.description for e in filtered_evidence]
     target_kpi = kpi_map.get("revenue", kpis[0])
 
     narrative = generate_narrative(
@@ -341,11 +389,15 @@ def main():
         st.markdown(
             f"""
             <div class="panel-card">
-                <div class="panel-header">🎯 Diagnostic Narrative ({persona} Perspective)</div>
+                <div class="panel-header">
+                    <span>🎯 Diagnostic Narrative</span>
+                    <span class="rbac-badge">{persona} View</span>
+                </div>
                 <h4 style="margin-top:0; color:#0F172A;">{narrative.get('summary', 'Diagnostic Summary')}</h4>
                 <p style="color:#334155; font-size:14px; line-height:1.5;">
                     {narrative.get('reason', narrative.get('technical_diagnosis', ''))}
                 </p>
+                {f'<div style="font-size:13px; color:#64748B; margin-top:8px;"><b>Business Impact:</b> {narrative.get("business_impact")}</div>' if narrative.get("business_impact") and persona == 'Executive' else ''}
             </div>
             """,
             unsafe_allow_html=True,
@@ -421,12 +473,20 @@ def main():
 
         # Supporting Evidence Panel
         st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-        st.markdown('<div class="panel-header">📑 Corroborating Operational Evidence</div>', unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div class="panel-header">
+                <span>📑 Corroborating Evidence</span>
+                <span class="rbac-badge">{len(filtered_evidence)} items</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        if not combined_evidence:
+        if not filtered_evidence:
             st.info("No operational evidence items linked to this scenario.")
         else:
-            for item in combined_evidence:
+            for item in filtered_evidence:
                 source_class = f"source-tag-{item.source.lower()}"
                 st.markdown(
                     f"""
@@ -463,6 +523,12 @@ def main():
         with cf2:
             if st.button("👎 Inaccurate", use_container_width=True):
                 record_feedback(scenario_key, target_kpi.key, "down", persona)
+
+        recent_fb = get_recent_feedback()
+        if recent_fb:
+            with st.expander("📜 Recent Submissions"):
+                for fb in recent_fb:
+                    st.caption(f"{fb['rating']} ({fb['persona']}) - {fb['scenario']}")
 
     # 11. Telemetry Bar
     telemetry = narrative.get("telemetry", {})
