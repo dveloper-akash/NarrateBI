@@ -17,11 +17,16 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+ENV_FILE = PROJECT_ROOT / ".env"
 PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
+
+# Load environment variables from project root
+load_dotenv(dotenv_path=ENV_FILE, override=True)
 
 
 def calculate_ai_cost(input_tokens: int, output_tokens: int) -> float:
-    """Computes AI inference cost based on Gemini 2.5 Flash pricing:
+    """Computes AI inference cost based on Gemini Flash pricing:
     - Input: $0.075 per 1M tokens ($0.000000075 / token)
     - Output: $0.30 per 1M tokens ($0.00000030 / token)
     """
@@ -42,11 +47,11 @@ def generate_narrative(
     should_abstain: bool = False,
 ) -> Dict[str, Any]:
     """Generates structured narrative with latency and token telemetry."""
-    # Always reload environment variables so newly saved .env is detected immediately
-    load_dotenv(override=True)
+    # Always reload environment variables on execution
+    load_dotenv(dotenv_path=ENV_FILE, override=True)
     start_time = time.time()
 
-    # 1. Handle explicit abstention
+    # 1. Handle explicit abstention (Low Confidence or Cold Start)
     if should_abstain:
         latency_ms = int((time.time() - start_time) * 1000)
         return {
@@ -65,7 +70,7 @@ def generate_narrative(
             },
         }
 
-    # 2. Prepare payload
+    # 2. Prepare strictly verified deterministic payload
     payload = {
         "kpi": kpi_name,
         "change_pct": change_pct,
@@ -88,12 +93,12 @@ def generate_narrative(
             prompt_file = PROMPTS_DIR / f"{persona.lower()}.txt"
             system_prompt = prompt_file.read_text(encoding="utf-8") if prompt_file.exists() else ""
 
-            user_prompt = f"Explain the verified diagnosis in valid JSON format:\n{json.dumps(payload, indent=2)}"
+            user_prompt = f"Explain the following verified diagnosis in valid JSON format:\n{json.dumps(payload, indent=2)}"
 
-            # Supported Gemini Flash models (try current supported generation)
-            candidate_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+            # Supported Gemini Flash models
+            candidate_models = ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-2.5-flash"]
             response = None
-            used_model = "Gemini Flash"
+            used_model = "Gemini 3.6 Flash"
 
             for model_name in candidate_models:
                 try:
@@ -102,7 +107,7 @@ def generate_narrative(
                         contents=f"{system_prompt}\n\n{user_prompt}",
                         config={"response_mime_type": "application/json"},
                     )
-                    used_model = model_name
+                    used_model = "Gemini Flash" if "flash" in model_name else model_name
                     break
                 except Exception:
                     continue
@@ -111,7 +116,7 @@ def generate_narrative(
                 parsed = json.loads(response.text)
                 latency_ms = int((time.time() - start_time) * 1000)
 
-                # Extract token usage metadata from Gemini response if available
+                # Extract token usage metadata from Gemini response
                 usage = getattr(response, "usage_metadata", None)
                 if usage:
                     in_tokens = getattr(usage, "prompt_token_count", 0) or 250
@@ -131,7 +136,7 @@ def generate_narrative(
                 }
                 return parsed
         except Exception:
-            # Fall through to deterministic grounded fallback on any network/quota/client failure
+            # On any network/client error, seamlessly fall back to grounded deterministic explanation
             pass
 
     # 4. Deterministic Persona Fallback Narrative (Resilient Grounding)
@@ -140,7 +145,6 @@ def generate_narrative(
     out_tokens = 95
     est_cost = calculate_ai_cost(in_tokens, out_tokens)
 
-    # Dynamic explanation reflecting actual driver
     if persona.lower() == "executive":
         return {
             "summary": f"{kpi_name} fell {abs(change_pct):.1f}% primarily driven by a decline in {primary_driver} ({driver_contribution:.0f}% contribution).",
