@@ -24,6 +24,18 @@
     "content": "# Incident Report: INC-84920 - Payment Gateway Timeout Storm\n\n- **Date / Time**: `2026-08-26 14:15:00 UTC`\n- **Severity**: SEV-1 (Critical Revenue Impact)\n- **Impacted Systems**: `checkout-web`, `payment-service`, `gateway-proxy`\n- **Summary**:\n  - Spike in checkout errors observed at 14:15 UTC (15 mins following v2.4.1 release).\n  - Upstream gateway endpoints responded with HTTP 504 Gateway Timeout on checkout requests.\n  - Overall checkout conversion dropped sharply by ~18% across mobile and web platforms.\n- **Immediate Action**: Ops on-call paged; investigating connection pool configuration on payment-service v2.4.1.\n"
   },
   {
+    "id": "incidents_incident_aov_pricing_rule",
+    "category": "incidents",
+    "title": "Incident Report: INC-91024 - Unintended Sitewide Pricing Discount",
+    "filename": "incident_aov_pricing_rule.md",
+    "path": "C:\\Users\\User\\Desktop\\accenture\\narratebi\\rag\\documents\\incidents\\incident_aov_pricing_rule.md",
+    "service": "pricing-engine",
+    "timestamp": "2026-08-26 14:00:00 UTC",
+    "version": "",
+    "severity": "SEV-1 (Revenue Margin Drop)",
+    "content": "# Incident Report: INC-91024 - Unintended Sitewide Pricing Discount\n\n- **Date / Time**: `2026-08-26 14:00:00 UTC`\n- **Severity**: SEV-1 (Revenue Margin Drop)\n- **Impacted Systems**: `pricing-engine`, `cart-service`, `promotions-api`\n- **Summary**:\n  - Global sitewide promotional rule applied an unintended 30% discount to all completed cart checkouts.\n  - Average Order Value (AOV) plummeted from \u20b91,000 to \u20b9700 (-30%).\n  - Total order volume and visitor sessions remained stable at normal capacity (5,000 orders / 100,000 sessions).\n- **Immediate Action**: Ops paged; disabling the invalid promotion rule on `promotions-api`.\n"
+  },
+  {
     "id": "logs_payment_service_error_log",
     "category": "logs",
     "title": "Operational Log Extract: payment-service",

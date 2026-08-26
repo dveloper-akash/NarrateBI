@@ -127,7 +127,7 @@ class TestPhase1DeterministicEngines(unittest.TestCase):
 
     def test_multi_tier_driver_analysis(self):
         """Test hierarchical driver analysis: Revenue -> Orders -> Conversion Rate."""
-        kpis = fetch_kpis_for_scenario("scenario_1_multifactor")
+        kpis = fetch_kpis_for_scenario("scenario_4_rbac")
         kpi_map = {k.key: k for k in kpis}
 
         driver_res = analyze_revenue_drivers(kpi_map)

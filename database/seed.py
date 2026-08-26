@@ -31,13 +31,13 @@ def seed_baseline_data():
         # -------------------------------------------------------------
         # Columns: (scenario_id, kpi_key, current_value, baseline_value, change_pct, unit, history_days)
         kpi_records = [
-            # SCENARIO 1: Multi-factor diagnosis (Payment service incident)
-            # Sessions = 100,000 (0%), CR = 4.21% (-15.8%), Orders = 4,210 (-15.8%), AOV = ₹1,050 (+5.0%), Revenue = ₹44.205L (-11.6%)
-            ("scenario_1_multifactor", "revenue", 4420500.0, 5000000.0, -11.59, "INR", 30),
-            ("scenario_1_multifactor", "orders", 4210.0, 5000.0, -15.80, "Count", 30),
-            ("scenario_1_multifactor", "conversion_rate", 4.21, 5.0, -15.80, "%", 30),
+            # SCENARIO 1: AOV Drop Test (Orders = 5,000, AOV = ₹700, Rev = ₹35L)
+            # Sessions = 100,000 (0%), CR = 5.0% (0%), Orders = 5,000 (0%), AOV = ₹700 (-30.0%), Revenue = ₹35.0L (-30.0%)
+            ("scenario_1_multifactor", "revenue", 3500000.0, 5000000.0, -30.00, "INR", 30),
+            ("scenario_1_multifactor", "orders", 5000.0, 5000.0, 0.00, "Count", 30),
+            ("scenario_1_multifactor", "conversion_rate", 5.00, 5.0, 0.00, "%", 30),
             ("scenario_1_multifactor", "sessions", 100000.0, 100000.0, 0.00, "Count", 30),
-            ("scenario_1_multifactor", "aov", 1050.0, 1000.0, 5.00, "INR", 30),
+            ("scenario_1_multifactor", "aov", 700.0, 1000.0, -30.00, "INR", 30),
 
             # SCENARIO 2: Low confidence / Missing operational evidence
             # Revenue = ₹44.0L (-12.0%), Orders = 4,400 (-12.0%), CR = 4.4% (-12.0%), Sessions = 100k, AOV = ₹1,000
