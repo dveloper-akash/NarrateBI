@@ -389,21 +389,51 @@ def main():
             has_sufficient_history=has_sufficient_history,
         )
 
-    # 8. Persona AI Narrative Generation
+    # 8. Persona AI Narrative Generation (with animated loading steps)
+    import time as _time
     evidence_desc = [e.description for e in filtered_evidence]
     target_kpi = kpi_map.get("revenue", kpis[0])
 
-    narrative = generate_narrative(
-        kpi_name=target_kpi.name,
-        change_pct=target_kpi.change_pct,
-        primary_driver=primary_driver_name,
-        driver_contribution=primary_driver_contrib,
-        confidence_score=confidence_result.score,
-        confidence_level=confidence_result.level,
-        evidence_descriptions=evidence_desc,
-        persona=persona.lower(),
-        should_abstain=confidence_result.should_abstain,
-    )
+    with st.status(
+        f"🤖 NarrateBI AI · Generating {persona} narrative...",
+        expanded=True,
+    ) as _status:
+        st.write("🔍 Loading verified KPI deltas and driver analysis...")
+        _time.sleep(0.3)
+        st.write(f"📊 Driver isolated: **{primary_driver_name}** ({primary_driver_contrib:.0f}% contribution)")
+        _time.sleep(0.3)
+        st.write(f"🧾 Retrieving {len(evidence_desc)} corroborating evidence items from RAG...")
+        _time.sleep(0.3)
+        st.write(f"🛡️ Confidence score validated: **{confidence_result.score}% · {confidence_result.level}**")
+        _time.sleep(0.2)
+        if not confidence_result.should_abstain:
+            st.write("✨ Sending verified diagnostics to Gemini Flash for narrative synthesis...")
+        else:
+            st.write("⚠️ Confidence too low — using grounded deterministic fallback...")
+
+        narrative = generate_narrative(
+            kpi_name=target_kpi.name,
+            change_pct=target_kpi.change_pct,
+            primary_driver=primary_driver_name,
+            driver_contribution=primary_driver_contrib,
+            confidence_score=confidence_result.score,
+            confidence_level=confidence_result.level,
+            evidence_descriptions=evidence_desc,
+            persona=persona.lower(),
+            should_abstain=confidence_result.should_abstain,
+        )
+
+        mode = narrative.get("telemetry", {}).get("mode", "")
+        if "LLM" in mode or "Gemini" in mode:
+            _status.update(
+                label=f"✅ Gemini Flash narrative ready · {narrative['telemetry']['tokens']} tokens · ${narrative['telemetry']['estimated_cost_usd']:.5f}",
+                state="complete",
+                expanded=False,
+            )
+        elif "Abstention" in mode:
+            _status.update(label="⚠️ Abstained — insufficient evidence", state="error", expanded=False)
+        else:
+            _status.update(label="🔒 Grounded fallback narrative ready", state="complete", expanded=False)
 
     # 9. Main Grid
     col_left, col_right = st.columns([7, 5])
