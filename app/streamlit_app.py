@@ -295,8 +295,20 @@ def main():
 
     st.divider()
 
-    # 2. Pipeline Execution: Fetch KPIs
+    # 2. Pipeline Execution: Fetch KPIs (auto-seed if DB is empty)
     kpis = fetch_kpis_for_scenario(scenario_key)
+    if not kpis:
+        try:
+            from database.seed import init_db, seed_baseline_data
+            from rag.ingest import ingest_documents
+            init_db()
+            seed_baseline_data()
+            ingest_documents()
+            kpis = fetch_kpis_for_scenario(scenario_key)
+        except Exception as e:
+            st.error(f"Failed to initialize database: {e}", icon="🚨")
+            return
+
     if not kpis:
         st.error("No KPI records found. Please run `python database/seed.py`.", icon="🚨")
         return
