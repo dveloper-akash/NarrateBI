@@ -1,0 +1,8 @@
+{
+  "scenario_id": "scenario_3_new_kpi",
+  "title": "New KPI / Limited History (Cold Start)",
+  "description": "New Product Conversion has only 4 days of history. Engine must detect insufficient baseline data and abstain.",
+  "target_kpi": "new_product_conversion",
+  "has_sufficient_history": false,
+  "simulated_query": "new product category conversion"
+}

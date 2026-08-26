@@ -1,0 +1,87 @@
+# NarrateBI - KPI Contracts Specification
+# Source of truth for KPI metadata, mathematical definitions, lineages, and anomaly thresholds.
+
+kpis:
+  revenue:
+    name: Revenue
+    definition: Total monetary value of completed sales transactions
+    formula: Orders × AOV
+    source: ERP / Sales
+    refresh: Daily
+    unit: INR (₹)
+    threshold: 10.0 # Percentage change considered anomalous
+    min_history_days: 14
+    lineage: "ERP -> (Orders, AOV) -> Revenue"
+    access:
+      - executive
+      - engineer
+
+  orders:
+    name: Orders
+    definition: Count of successful purchase transactions completed by customers
+    formula: Sessions × Conversion Rate
+    source: ERP / Sales
+    refresh: Daily
+    unit: Count
+    threshold: 8.0
+    min_history_days: 14
+    lineage: "ERP -> Sales Transactions -> Orders"
+    access:
+      - executive
+      - engineer
+
+  conversion_rate:
+    name: Conversion Rate
+    definition: Percentage of total visitor sessions that result in completed orders
+    formula: (Orders / Sessions) × 100
+    source: Website / Analytics
+    refresh: Hourly
+    unit: Percentage (%)
+    threshold: 8.0
+    min_history_days: 14
+    lineage: "Website Logs & Order DB -> (Orders / Sessions) -> Conversion Rate"
+    access:
+      - executive
+      - engineer
+
+  sessions:
+    name: Sessions
+    definition: Total number of unique user browsing sessions on the web and mobile platforms
+    formula: Count of unique visitor sessions
+    source: Website / Analytics
+    refresh: Hourly
+    unit: Count
+    threshold: 10.0
+    min_history_days: 14
+    lineage: "Web Server / CDN -> Ingest -> Sessions"
+    access:
+      - executive
+      - engineer
+
+  aov:
+    name: Average Order Value (AOV)
+    definition: Average monetary amount spent per completed order
+    formula: Revenue / Orders
+    source: ERP / Sales
+    refresh: Daily
+    unit: INR (₹)
+    threshold: 5.0
+    min_history_days: 14
+    lineage: "ERP -> (Revenue / Orders) -> AOV"
+    access:
+      - executive
+      - engineer
+
+  new_product_conversion:
+    name: New Product Conversion
+    definition: Conversion rate for newly launched product category line
+    formula: (New Category Orders / New Category Product Page Views) × 100
+    source: Website / Product Analytics
+    refresh: Hourly
+    unit: Percentage (%)
+    threshold: 10.0
+    min_history_days: 14
+    lineage: "Clickstream -> New Product Checkout -> New Product Conversion"
+    access:
+      - executive
+      - engineer

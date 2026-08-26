@@ -1,0 +1,8 @@
+{
+  "scenario_id": "scenario_1_multifactor",
+  "title": "Multi-factor Diagnosis (Payment Service Incident)",
+  "description": "Revenue dropped 11.6% driven by an 18.2% drop in conversion rate following a payment-service deployment.",
+  "target_kpi": "revenue",
+  "has_sufficient_history": true,
+  "simulated_query": "payment gateway timeout errors and checkout failure deployment"
+}

@@ -1,0 +1,8 @@
+{
+  "scenario_id": "scenario_2_low_confidence",
+  "title": "Low Confidence / Missing Evidence",
+  "description": "Revenue dropped 12% with driver identified, but zero operational logs or deployment records are found. Engine must abstain.",
+  "target_kpi": "revenue",
+  "has_sufficient_history": true,
+  "simulated_query": "unrelated non-existent service query"
+}

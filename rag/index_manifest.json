@@ -1,0 +1,30 @@
+[
+  {
+    "id": "deployments_payment_service_v2_4_1",
+    "category": "deployments",
+    "filename": "payment_service_v2_4_1.md",
+    "path": "C:\\Users\\User\\Desktop\\accenture\\narratebi\\rag\\documents\\deployments\\payment_service_v2_4_1.md",
+    "content": "# Deployment Record: Payment Service v2.4.1\n\n- **Service**: `payment-service`\n- **Version**: `v2.4.1`\n- **Timestamp**: `2026-08-26 14:00:00 UTC`\n- **Deployed By**: Release Automation Pipeline\n- **Changes**:\n  - Updated gateway HTTP connection pool timeouts from 30s to 5s\n  - Upgraded third-party checkout SDK bindings\n  - Enabled aggressive retry policy on card tokenization endpoints\n- **Status**: Completed successfully without deployment pipeline errors\n"
+  },
+  {
+    "id": "incidents_incident_20260826_gateway_timeout",
+    "category": "incidents",
+    "filename": "incident_20260826_gateway_timeout.md",
+    "path": "C:\\Users\\User\\Desktop\\accenture\\narratebi\\rag\\documents\\incidents\\incident_20260826_gateway_timeout.md",
+    "content": "# Incident Report: INC-84920 - Payment Gateway Timeout Storm\n\n- **Date / Time**: `2026-08-26 14:15:00 UTC`\n- **Severity**: SEV-1 (Critical Revenue Impact)\n- **Impacted Systems**: `checkout-web`, `payment-service`, `gateway-proxy`\n- **Summary**:\n  - Spike in checkout errors observed at 14:15 UTC (15 mins following v2.4.1 release).\n  - Upstream gateway endpoints responded with HTTP 504 Gateway Timeout on checkout requests.\n  - Overall checkout conversion dropped sharply by ~18% across mobile and web platforms.\n- **Immediate Action**: Ops on-call paged; investigating connection pool configuration on payment-service v2.4.1.\n"
+  },
+  {
+    "id": "logs_payment_service_error_log",
+    "category": "logs",
+    "filename": "payment_service_error_log.md",
+    "path": "C:\\Users\\User\\Desktop\\accenture\\narratebi\\rag\\documents\\logs\\payment_service_error_log.md",
+    "content": "# Operational Log Extract: payment-service\n\n```\n2026-08-26 14:14:58 [INFO] payment-service: Healthcheck OK (v2.4.1)\n2026-08-26 14:15:02 [ERROR] payment-service: Gateway timeout HTTP 504 on POST /v2/charges\n2026-08-26 14:15:10 [ERROR] payment-service: Connection pool exhausted (active: 50, queued: 120)\n2026-08-26 14:15:22 [WARN] checkout-router: Circuit breaker tripped for provider-primary\n2026-08-26 14:16:00 [ERROR] payment-service: Transaction failed: id=txn_98242 code=TIMEOUT_ERR\n```\n"
+  },
+  {
+    "id": "support_support_ticket_checkout_spike",
+    "category": "support",
+    "filename": "support_ticket_checkout_spike.md",
+    "path": "C:\\Users\\User\\Desktop\\accenture\\narratebi\\rag\\documents\\support\\support_ticket_checkout_spike.md",
+    "content": "# Support Escalation Digest: Customer Checkout Complaints\n\n- **Time Window**: `2026-08-26 14:18 - 14:35 UTC`\n- **Volume**: 48 new tickets created (Normal baseline: 2/hour)\n- **Top User Complaints**:\n  - \"Card was charged but order confirmation screen did not load\"\n  - \"Spinning wheel at payment step then 504 error page\"\n  - \"Tried 3 times to checkout cart with promo code, failed every time\"\n- **Customer Support Action**: Tagged engineering lead as high priority.\n"
+  }
+]

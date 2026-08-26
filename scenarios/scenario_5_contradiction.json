@@ -1,0 +1,8 @@
+{
+  "scenario_id": "scenario_5_contradiction",
+  "title": "Contradictory Evidence Scenario",
+  "description": "Signals where traffic dropped but marketing campaigns reported positive ROAS. System isolates conflicting drivers.",
+  "target_kpi": "revenue",
+  "has_sufficient_history": true,
+  "simulated_query": "marketing campaigns traffic anomalies"
+}
