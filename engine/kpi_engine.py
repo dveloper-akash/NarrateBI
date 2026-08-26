@@ -2,6 +2,10 @@
 
 Deterministic math only:
 - Percentage change: ((current - baseline) / baseline) * 100
+- Formula relationships:
+    * Conversion Rate = (Orders / Sessions) * 100
+    * Revenue = Orders * AOV
+    * AOV = Revenue / Orders
 - Anomaly threshold comparison from config/kpi_contracts.yaml
 - Cold-start history verification (< 14 days)
 """
@@ -45,12 +49,13 @@ class KPIResult:
     metadata: KPIMetadata
 
 
-def load_kpi_contracts() -> Dict[str, KPIMetadata]:
+def load_kpi_contracts(config_file: Optional[Path] = None) -> Dict[str, KPIMetadata]:
     """Loads KPI metadata contracts from YAML configuration."""
-    if not CONFIG_PATH.exists():
-        raise FileNotFoundError(f"KPI contract config not found at {CONFIG_PATH}")
+    target_path = config_file or CONFIG_PATH
+    if not target_path.exists():
+        raise FileNotFoundError(f"KPI contract config not found at {target_path}")
 
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+    with open(target_path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
     contracts = {}
@@ -72,10 +77,29 @@ def load_kpi_contracts() -> Dict[str, KPIMetadata]:
 
 
 def calculate_change_pct(current: float, baseline: float) -> float:
-    """Deterministic percentage change calculation."""
+    """Calculates deterministic percentage change between current and baseline."""
     if baseline == 0:
         return 0.0
     return round(((current - baseline) / baseline) * 100.0, 2)
+
+
+def calculate_conversion_rate(orders: float, sessions: float) -> float:
+    """Deterministic Conversion Rate formula: (Orders / Sessions) * 100."""
+    if sessions <= 0:
+        return 0.0
+    return round((orders / sessions) * 100.0, 2)
+
+
+def calculate_revenue(orders: float, aov: float) -> float:
+    """Deterministic Revenue formula: Orders * AOV."""
+    return round(orders * aov, 2)
+
+
+def calculate_aov(revenue: float, orders: float) -> float:
+    """Deterministic AOV formula: Revenue / Orders."""
+    if orders <= 0:
+        return 0.0
+    return round(revenue / orders, 2)
 
 
 def evaluate_kpi(
@@ -85,7 +109,7 @@ def evaluate_kpi(
     history_days: int = 30,
     contracts: Optional[Dict[str, KPIMetadata]] = None,
 ) -> KPIResult:
-    """Evaluates a single KPI for anomaly and cold-start status."""
+    """Evaluates a single KPI for anomaly threshold breaches and cold-start state."""
     if contracts is None:
         contracts = load_kpi_contracts()
 
@@ -124,21 +148,23 @@ def evaluate_kpi(
     )
 
 
-def fetch_kpis_for_scenario(scenario_id: str) -> List[KPIResult]:
-    """Fetches and evaluates all KPIs for a given scenario from SQLite."""
+def fetch_kpis_for_scenario(scenario_id: str, db_file: Optional[Path] = None) -> List[KPIResult]:
+    """Fetches and evaluates all KPIs for a given scenario from the SQLite database."""
     contracts = load_kpi_contracts()
     results = []
+    target_db = db_file or DB_PATH
 
-    if not DB_PATH.exists():
+    if not target_db.exists():
         return results
 
-    with sqlite3.connect(DB_PATH) as conn:
+    with sqlite3.connect(target_db) as conn:
         cursor = conn.cursor()
         cursor.execute(
             """
             SELECT kpi_key, current_value, baseline_value, history_days
             FROM kpi_values
             WHERE scenario_id = ?
+            ORDER BY id ASC
             """,
             (scenario_id,),
         )
