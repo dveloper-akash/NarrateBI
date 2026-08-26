@@ -114,6 +114,7 @@ def decompose_multiplicative_pair(
         primary_driver=primary.name,
         primary_contribution=primary.contribution_pct,
         drivers=drivers,
+        sub_driver_result=None,
     )
 
 

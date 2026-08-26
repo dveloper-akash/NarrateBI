@@ -364,9 +364,10 @@ def main():
                     st.write(f"**{d.contribution_pct}%**")
 
             # Show Sub-driver Level 2 if present
-            if driver_res.sub_driver_result:
-                st.caption(f"↳ **Sub-Factor Decomposition for {driver_res.sub_driver_result.target_kpi}:**")
-                for sd in driver_res.sub_driver_result.drivers:
+            sub_res = getattr(driver_res, "sub_driver_result", None)
+            if sub_res:
+                st.caption(f"↳ **Sub-Factor Decomposition for {sub_res.target_kpi}:**")
+                for sd in sub_res.drivers:
                     sc1, sc2, sc3 = st.columns([4, 6, 2])
                     with sc1:
                         st.write(f"&nbsp;&nbsp;• {sd.name}")
