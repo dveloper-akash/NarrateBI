@@ -12,12 +12,21 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import json
+import os
 import sqlite3
 import streamlit as st
 from typing import Dict, List, Any
 from dotenv import load_dotenv
 
+# Load .env for local development
 load_dotenv(dotenv_path=PROJECT_ROOT / ".env", override=True)
+
+# Bridge Streamlit Cloud secrets → os.environ (so ai/narrative.py can read them)
+try:
+    if "GEMINI_API_KEY" in st.secrets and not os.getenv("GEMINI_API_KEY"):
+        os.environ["GEMINI_API_KEY"] = st.secrets["GEMINI_API_KEY"]
+except Exception:
+    pass
 
 # Engine imports
 from engine.kpi_engine import load_kpi_contracts, fetch_kpis_for_scenario, KPIResult
