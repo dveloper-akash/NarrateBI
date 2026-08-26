@@ -88,29 +88,45 @@ def generate_narrative(
     if api_key and len(api_key.strip()) > 10:
         try:
             from google import genai
+            from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 
             client = genai.Client(api_key=api_key.strip())
             prompt_file = PROMPTS_DIR / f"{persona.lower()}.txt"
             system_prompt = prompt_file.read_text(encoding="utf-8") if prompt_file.exists() else ""
 
-            user_prompt = f"Explain the following verified diagnosis in valid JSON format:\n{json.dumps(payload, indent=2)}"
+            # Keep prompt compact for faster Gemini response
+            user_prompt = (
+                f"Persona: {persona}. Explain this KPI diagnosis as JSON:\n"
+                f"KPI: {payload['kpi']} changed {payload['change_pct']:+.1f}%. "
+                f"Primary driver: {payload['primary_driver']} ({payload['driver_contribution_pct']:.0f}% contribution). "
+                f"Confidence: {payload['confidence_score']}% ({payload['confidence_level']}). "
+                f"Evidence: {'; '.join(payload['evidence'][:3]) if payload['evidence'] else 'None'}"
+            )
 
             # Supported Gemini Flash models
             candidate_models = ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-2.5-flash"]
             response = None
-            used_model = "Gemini 3.6 Flash"
+            used_model = "Gemini Flash"
 
-            for model_name in candidate_models:
-                try:
-                    response = client.models.generate_content(
-                        model=model_name,
-                        contents=f"{system_prompt}\n\n{user_prompt}",
-                        config={"response_mime_type": "application/json"},
-                    )
-                    used_model = "Gemini Flash" if "flash" in model_name else model_name
-                    break
-                except Exception:
-                    continue
+            def _call_gemini(model_name: str):
+                return client.models.generate_content(
+                    model=model_name,
+                    contents=f"{system_prompt}\n\n{user_prompt}",
+                    config={"response_mime_type": "application/json"},
+                )
+
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                for model_name in candidate_models:
+                    try:
+                        future = executor.submit(_call_gemini, model_name)
+                        response = future.result(timeout=12)  # 12-second hard timeout
+                        used_model = "Gemini Flash"
+                        break
+                    except FuturesTimeout:
+                        future.cancel()
+                        break  # Timeout → fall through to deterministic fallback
+                    except Exception:
+                        continue
 
             if response and response.text:
                 parsed = json.loads(response.text)
