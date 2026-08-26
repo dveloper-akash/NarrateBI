@@ -15,6 +15,9 @@ import json
 import sqlite3
 import streamlit as st
 from typing import Dict, List, Any
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Engine imports
 from engine.kpi_engine import load_kpi_contracts, fetch_kpis_for_scenario, KPIResult

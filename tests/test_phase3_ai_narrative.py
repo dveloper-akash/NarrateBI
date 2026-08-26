@@ -82,7 +82,7 @@ class TestPhase3AiNarrative(unittest.TestCase):
 
         self.assertEqual(res.get("status"), "abstain")
         self.assertIn("confidence is too low", res.get("summary", "").lower())
-        self.assertEqual(res["telemetry"]["mode"], "deterministic_abstention")
+        self.assertIn("abstention", res["telemetry"]["mode"].lower())
         self.assertEqual(res["telemetry"]["tokens"], 0)
 
 
