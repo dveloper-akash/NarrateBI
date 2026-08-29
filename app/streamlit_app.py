@@ -33,6 +33,7 @@ from engine.kpi_engine import load_kpi_contracts, fetch_kpis_for_scenario, KPIRe
 from engine.driver_engine import analyze_revenue_drivers, get_negative_contributors, get_positive_contributors
 from engine.evidence import get_combined_evidence, EvidenceItem
 from engine.confidence import calculate_confidence, ConfidenceScore
+from engine.action_engine import generate_action_plan, ActionPlan, ActionRecommendation
 from rag.retrieve import retrieve_evidence
 from rag.query_builder import build_rag_query
 from ai.narrative import generate_narrative
@@ -177,6 +178,52 @@ st.markdown(
     .source-tag-support { background: #E0F2FE; color: #0284C7; border: 1px solid #BAE6FD; }
     .source-tag-operations { background: #F3E8FF; color: #9333EA; border: 1px solid #E9D5FF; }
 
+    /* Action Plan Cards */
+    .action-card {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 10px;
+        padding: 16px 18px;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        transition: box-shadow 0.15s ease;
+    }
+    .action-card:hover { box-shadow: 0 4px 12px rgba(37,99,235,0.08); }
+    .action-card-critical { border-left: 5px solid #DC2626; }
+    .action-card-high     { border-left: 5px solid #F59E0B; }
+    .action-card-medium   { border-left: 5px solid #2563EB; }
+    .action-card-low      { border-left: 5px solid #94A3B8; }
+    .action-rank {
+        font-size: 11px; font-weight: 800;
+        text-transform: uppercase; letter-spacing: 0.5px;
+        color: #64748B; margin-bottom: 4px;
+    }
+    .action-lever {
+        font-size: 13px; font-weight: 700;
+        color: #2563EB; margin-bottom: 4px;
+    }
+    .action-text {
+        font-size: 13px; color: #1E293B;
+        line-height: 1.55; margin-bottom: 10px;
+    }
+    .action-meta-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 16px;
+        font-size: 12px;
+        color: #475569;
+        margin-top: 6px;
+    }
+    .action-meta-label { font-weight: 700; color: #94A3B8; text-transform: uppercase; font-size: 10px; }
+    .action-meta-val   { color: #1E293B; font-weight: 600; }
+    .urgency-critical { color: #DC2626; font-weight: 800; }
+    .urgency-high     { color: #D97706; font-weight: 800; }
+    .urgency-medium   { color: #2563EB; font-weight: 700; }
+    .urgency-low      { color: #64748B; font-weight: 700; }
+    .conf-badge-high   { background:#DCFCE7; color:#166534; padding:2px 8px; border-radius:5px; font-size:11px; font-weight:700; }
+    .conf-badge-medium { background:#FEF3C7; color:#92400E; padding:2px 8px; border-radius:5px; font-size:11px; font-weight:700; }
+    .conf-badge-low    { background:#FEE2E2; color:#991B1B; padding:2px 8px; border-radius:5px; font-size:11px; font-weight:700; }
+
     /* Telemetry Footer */
     .telemetry-bar {
         background: #1E293B;
@@ -189,12 +236,8 @@ st.markdown(
         margin-top: 24px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-    .telemetry-item {
-        color: #94A3B8;
-    }
-    .telemetry-item b {
-        color: #38BDF8;
-    }
+    .telemetry-item { color: #94A3B8; }
+    .telemetry-item b { color: #38BDF8; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -526,17 +569,85 @@ def main():
                             st.markdown('<span style="color:#DC2626;">▼</span>', unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # Recommendation Card
-        rec_text = narrative.get("recommendation", narrative.get("technical_recommendation", "Continue monitoring system metrics."))
+        # ── Structured Action Plan (new engine) ────────────────────────────────────
+        action_plan = generate_action_plan(
+            target_kpi_key=target_kpi.key,
+            target_kpi_name=target_kpi.name,
+            target_change_pct=target_kpi.change_pct,
+            driver_result=driver_res,
+            evidence=filtered_evidence,
+            confidence_result=confidence_result,
+            persona=persona.lower(),
+            scenario_id=scenario_key,
+        )
+
+        urgency_class = {"Critical": "action-card-critical", "High": "action-card-high",
+                         "Medium": "action-card-medium", "Low": "action-card-low"}
+        conf_badge = {"High": "conf-badge-high", "Medium": "conf-badge-medium", "Low": "conf-badge-low"}
+        urgency_color = {"Critical": "urgency-critical", "High": "urgency-high",
+                         "Medium": "urgency-medium", "Low": "urgency-low"}
+
         st.markdown(
-            f"""
-            <div class="panel-card" style="border-left: 5px solid #2563EB;">
-                <div class="panel-header" style="color:#2563EB;">💡 Recommended Action</div>
-                <div style="font-size:14px; font-weight:600; color:#1E293B; line-height:1.4;">{rec_text}</div>
-            </div>
-            """,
+            '<div class="panel-card">'
+            '<div class="panel-header" style="color:#2563EB;">'
+            '💡 Recommended Actions'
+            f'<span class="rbac-badge" style="margin-left:auto;">{len(action_plan.actions)} actions · {persona} view</span>'
+            '</div>',
             unsafe_allow_html=True,
         )
+
+        if action_plan.abstain_reason:
+            st.warning(
+                f"⚠️ **Action Withheld**: {action_plan.abstain_reason} "
+                "No interventions recommended until confidence ≥ 43%.",
+                icon="🛑"
+            )
+
+        for action in action_plan.actions:
+            card_class = urgency_class.get(action.urgency, "action-card-medium")
+            conf_cls = conf_badge.get(action.confidence, "conf-badge-low")
+            urg_cls = urgency_color.get(action.urgency, "urgency-medium")
+
+            st.markdown(
+                f"""
+                <div class="action-card {card_class}">
+                    <div class="action-rank">#{action.rank} · {action.action_type.replace('_', ' ').upper()} · 
+                        <span class="{urg_cls}">{action.urgency} Priority</span>
+                    </div>
+                    <div class="action-lever">🎯 {action.controllable_lever}</div>
+                    <div class="action-text">{action.action}</div>
+                    <div class="action-meta-grid">
+                        <div>
+                            <div class="action-meta-label">Driver</div>
+                            <div class="action-meta-val">{action.driver}</div>
+                        </div>
+                        <div>
+                            <div class="action-meta-label">Owner</div>
+                            <div class="action-meta-val">{action.owner}</div>
+                        </div>
+                        <div>
+                            <div class="action-meta-label">Expected Impact</div>
+                            <div class="action-meta-val">{action.expected_impact}</div>
+                        </div>
+                        <div>
+                            <div class="action-meta-label">Action Confidence</div>
+                            <div><span class="{conf_cls}">{action.confidence}</span></div>
+                        </div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            with st.expander(f"📋 Monitoring Plan & Evidence — #{action.rank}"):
+                st.markdown(f"**Monitoring Plan:** {action.monitoring_plan}")
+                st.markdown(f"**Confidence Rationale:** {action.confidence_rationale}")
+                if action.evidence_citations:
+                    st.markdown("**Evidence Citations:**")
+                    for cite in action.evidence_citations:
+                        st.caption(f"• {cite}")
+
+        st.caption(f"ℹ️ {action_plan.methodology_note}")
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with col_right:
         # Confidence Score Card

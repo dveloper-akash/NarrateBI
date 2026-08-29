@@ -10,6 +10,6 @@ CRITICAL RULES:
 {
   "summary": "Short 1-2 sentence executive headline of what happened",
   "reason": "Clear explanation of the primary business driver and customer-facing impact",
-  "business_impact": "High-level monetary or conversion impact estimate",
-  "recommendation": "Decisive business recommendation"
+  "business_impact": "High-level monetary or conversion impact estimate with revenue trajectory direction",
+  "recommendation": "Decisive business recommendation with: (1) the specific lever to pull, (2) the action to take, (3) the expected outcome, and (4) the accountable owner role"
 }
