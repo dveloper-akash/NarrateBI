@@ -1,8 +1,10 @@
 {
   "scenario_id": "scenario_5_contradiction",
-  "title": "Contradictory Evidence Scenario",
-  "description": "Signals where traffic dropped but marketing campaigns reported positive ROAS. System isolates conflicting drivers.",
+  "title": "Contradictory Signals Analysis (AOV Up, Revenue Down)",
+  "description": "Premium pricing push on Aug 22 raised AOV +22% but suppressed conversion -28%; sessions stable. Revenue is net-negative (~-12%) despite marketing reporting positive ROAS. Engine must surface the conversion/volume driver as dominant, not AOV.",
   "target_kpi": "revenue",
+  "analysis_period": {"start": "2026-08-22", "end": "2026-08-28"},
+  "baseline_period": {"start": "2026-08-15", "end": "2026-08-21"},
   "has_sufficient_history": true,
-  "simulated_query": "marketing campaigns traffic anomalies"
+  "simulated_query": "premium pricing AOV conversion rate traffic marketing ROAS revenue decline"
 }

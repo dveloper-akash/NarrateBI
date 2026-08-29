@@ -1,8 +1,10 @@
 {
   "scenario_id": "scenario_4_rbac",
   "title": "Role-Based Access (RBAC) Demonstration",
-  "description": "Exemplifies how Executive vs Engineer views interpret the same underlying diagnostic data under different access policies.",
+  "description": "Same payment-service incident as Scenario 1. Demonstrates how Executive and Engineer personas interpret the same diagnostic data under different access policies.",
   "target_kpi": "revenue",
+  "analysis_period": {"start": "2026-08-22", "end": "2026-08-28"},
+  "baseline_period": {"start": "2026-08-15", "end": "2026-08-21"},
   "has_sufficient_history": true,
-  "simulated_query": "payment gateway deployment infrastructure"
+  "simulated_query": "payment gateway deployment infrastructure checkout error logs"
 }
