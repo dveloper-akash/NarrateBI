@@ -30,10 +30,12 @@ except Exception:
 
 # Engine imports
 from engine.kpi_engine import load_kpi_contracts, fetch_kpis_for_scenario, KPIResult
-from engine.driver_engine import analyze_revenue_drivers
+from engine.driver_engine import analyze_revenue_drivers, get_negative_contributors, get_positive_contributors
 from engine.evidence import get_combined_evidence, EvidenceItem
 from engine.confidence import calculate_confidence, ConfidenceScore
+from engine.action_engine import generate_action_plan, ActionPlan, ActionRecommendation
 from rag.retrieve import retrieve_evidence
+from rag.query_builder import build_rag_query
 from ai.narrative import generate_narrative
 
 # Page Configuration
@@ -176,6 +178,52 @@ st.markdown(
     .source-tag-support { background: #E0F2FE; color: #0284C7; border: 1px solid #BAE6FD; }
     .source-tag-operations { background: #F3E8FF; color: #9333EA; border: 1px solid #E9D5FF; }
 
+    /* Action Plan Cards */
+    .action-card {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 10px;
+        padding: 16px 18px;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        transition: box-shadow 0.15s ease;
+    }
+    .action-card:hover { box-shadow: 0 4px 12px rgba(37,99,235,0.08); }
+    .action-card-critical { border-left: 5px solid #DC2626; }
+    .action-card-high     { border-left: 5px solid #F59E0B; }
+    .action-card-medium   { border-left: 5px solid #2563EB; }
+    .action-card-low      { border-left: 5px solid #94A3B8; }
+    .action-rank {
+        font-size: 11px; font-weight: 800;
+        text-transform: uppercase; letter-spacing: 0.5px;
+        color: #64748B; margin-bottom: 4px;
+    }
+    .action-lever {
+        font-size: 13px; font-weight: 700;
+        color: #2563EB; margin-bottom: 4px;
+    }
+    .action-text {
+        font-size: 13px; color: #1E293B;
+        line-height: 1.55; margin-bottom: 10px;
+    }
+    .action-meta-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 16px;
+        font-size: 12px;
+        color: #475569;
+        margin-top: 6px;
+    }
+    .action-meta-label { font-weight: 700; color: #94A3B8; text-transform: uppercase; font-size: 10px; }
+    .action-meta-val   { color: #1E293B; font-weight: 600; }
+    .urgency-critical { color: #DC2626; font-weight: 800; }
+    .urgency-high     { color: #D97706; font-weight: 800; }
+    .urgency-medium   { color: #2563EB; font-weight: 700; }
+    .urgency-low      { color: #64748B; font-weight: 700; }
+    .conf-badge-high   { background:#DCFCE7; color:#166534; padding:2px 8px; border-radius:5px; font-size:11px; font-weight:700; }
+    .conf-badge-medium { background:#FEF3C7; color:#92400E; padding:2px 8px; border-radius:5px; font-size:11px; font-weight:700; }
+    .conf-badge-low    { background:#FEE2E2; color:#991B1B; padding:2px 8px; border-radius:5px; font-size:11px; font-weight:700; }
+
     /* Telemetry Footer */
     .telemetry-bar {
         background: #1E293B;
@@ -188,12 +236,8 @@ st.markdown(
         margin-top: 24px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-    .telemetry-item {
-        color: #94A3B8;
-    }
-    .telemetry-item b {
-        color: #38BDF8;
-    }
+    .telemetry-item { color: #94A3B8; }
+    .telemetry-item b { color: #38BDF8; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -372,21 +416,46 @@ def main():
     primary_driver_name = driver_res.primary_driver if driver_res else "Conversion Rate"
     primary_driver_contrib = driver_res.primary_contribution if driver_res else 76.0
 
-    # 6. Evidence Retrieval (RAG & SQLite)
-    query_context = "payment gateway timeout errors and checkout failure deployment"
-    unstructured_evidence = retrieve_evidence(query_context) if scenario_key != "scenario_2_low_confidence" else []
+    # 6. Evidence Retrieval (Dynamic RAG query from analytical results)
+    target_kpi_for_query = kpi_map.get("revenue", kpis[0])
+    if scenario_key != "scenario_2_low_confidence":
+        dynamic_query = build_rag_query(
+            target_kpi_for_query, driver_res,
+            date_start="2026-08-22", date_end="2026-08-28"
+        )
+        unstructured_evidence = retrieve_evidence(dynamic_query)
+    else:
+        unstructured_evidence = []
     combined_evidence = get_combined_evidence(scenario_key, unstructured_evidence)
     filtered_evidence = filter_evidence_by_rbac(combined_evidence, persona)
 
     # 7. Deterministic Confidence Scoring
+    # Compute driver ambiguity gap (difference between top 2 drivers)
+    driver_ambiguity_gap = None
+    if driver_res and len(driver_res.drivers) >= 2:
+        sorted_drivers = sorted(driver_res.drivers, key=lambda d: d.contribution_pct, reverse=True)
+        driver_ambiguity_gap = sorted_drivers[0].contribution_pct - sorted_drivers[1].contribution_pct
+
+    structured_ev = [e for e in combined_evidence if e.is_structured]
+    rag_ev = [e for e in combined_evidence if not e.is_structured]
+
     has_sufficient_history = not bool(cold_start_kpi)
     if scenario_key == "scenario_2_low_confidence":
-        confidence_result = calculate_confidence(primary_driver_contribution=50.0, evidence_items=[], has_sufficient_history=True)
+        confidence_result = calculate_confidence(
+            primary_driver_contribution=35.0,
+            evidence_items=[],
+            has_sufficient_history=True,
+            driver_ambiguity_gap=3.0,
+        )
     else:
         confidence_result = calculate_confidence(
             primary_driver_contribution=primary_driver_contrib,
             evidence_items=combined_evidence,
             has_sufficient_history=has_sufficient_history,
+            driver_ambiguity_gap=driver_ambiguity_gap,
+            history_days=kpis[0].history_days if kpis else 30,
+            structured_evidence=structured_ev,
+            rag_evidence=rag_ev,
         )
 
     # 8. Persona AI Narrative Generation (with animated loading steps)
@@ -461,39 +530,124 @@ def main():
         st.markdown('<div class="panel-card"><div class="panel-header">⚖️ Deterministic Driver Breakdown</div>', unsafe_allow_html=True)
         if driver_res:
             for d in driver_res.drivers:
-                c1, c2, c3 = st.columns([4, 6, 2])
+                c1, c2, c3, c4 = st.columns([3, 5, 2, 2])
                 with c1:
                     st.write(f"**{d.name}**")
+                    if d.is_anomalous:
+                        st.caption("⚠️ anomalous")
                 with c2:
                     st.progress(min(1.0, max(0.0, d.contribution_pct / 100.0)))
                 with c3:
                     st.write(f"**{d.contribution_pct}%**")
+                with c4:
+                    # Impact direction badge (NOT anomaly direction)
+                    impact = getattr(d, 'impact_direction', 'neutral')
+                    if impact == 'positive':
+                        st.markdown('<span style="color:#16A34A;font-weight:700;">▲ offset</span>', unsafe_allow_html=True)
+                    elif impact == 'negative':
+                        st.markdown('<span style="color:#DC2626;font-weight:700;">▼ drag</span>', unsafe_allow_html=True)
+                    else:
+                        st.markdown('<span style="color:#94A3B8;">– neutral</span>', unsafe_allow_html=True)
 
             # Show Sub-driver Level 2 if present
             sub_res = getattr(driver_res, "sub_driver_result", None)
             if sub_res:
                 st.caption(f"↳ **Sub-Factor Decomposition for {sub_res.target_kpi}:**")
                 for sd in sub_res.drivers:
-                    sc1, sc2, sc3 = st.columns([4, 6, 2])
+                    sc1, sc2, sc3, sc4 = st.columns([3, 5, 2, 2])
                     with sc1:
-                        st.write(f"&nbsp;&nbsp;• {sd.name}")
+                        st.write(f"\u00a0\u00a0• {sd.name}")
                     with sc2:
                         st.progress(min(1.0, max(0.0, sd.contribution_pct / 100.0)))
                     with sc3:
                         st.write(f"{sd.contribution_pct}%")
+                    with sc4:
+                        impact = getattr(sd, 'impact_direction', 'neutral')
+                        if impact == 'positive':
+                            st.markdown('<span style="color:#16A34A;">▲</span>', unsafe_allow_html=True)
+                        elif impact == 'negative':
+                            st.markdown('<span style="color:#DC2626;">▼</span>', unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # Recommendation Card
-        rec_text = narrative.get("recommendation", narrative.get("technical_recommendation", "Continue monitoring system metrics."))
+        # ── Structured Action Plan (new engine) ────────────────────────────────────
+        action_plan = generate_action_plan(
+            target_kpi_key=target_kpi.key,
+            target_kpi_name=target_kpi.name,
+            target_change_pct=target_kpi.change_pct,
+            driver_result=driver_res,
+            evidence=filtered_evidence,
+            confidence_result=confidence_result,
+            persona=persona.lower(),
+            scenario_id=scenario_key,
+        )
+
+        urgency_class = {"Critical": "action-card-critical", "High": "action-card-high",
+                         "Medium": "action-card-medium", "Low": "action-card-low"}
+        conf_badge = {"High": "conf-badge-high", "Medium": "conf-badge-medium", "Low": "conf-badge-low"}
+        urgency_color = {"Critical": "urgency-critical", "High": "urgency-high",
+                         "Medium": "urgency-medium", "Low": "urgency-low"}
+
         st.markdown(
-            f"""
-            <div class="panel-card" style="border-left: 5px solid #2563EB;">
-                <div class="panel-header" style="color:#2563EB;">💡 Recommended Action</div>
-                <div style="font-size:14px; font-weight:600; color:#1E293B; line-height:1.4;">{rec_text}</div>
-            </div>
-            """,
+            '<div class="panel-card">'
+            '<div class="panel-header" style="color:#2563EB;">'
+            '💡 Recommended Actions'
+            f'<span class="rbac-badge" style="margin-left:auto;">{len(action_plan.actions)} actions · {persona} view</span>'
+            '</div>',
             unsafe_allow_html=True,
         )
+
+        if action_plan.abstain_reason:
+            st.warning(
+                f"⚠️ **Action Withheld**: {action_plan.abstain_reason} "
+                "No interventions recommended until confidence ≥ 43%.",
+                icon="🛑"
+            )
+
+        for action in action_plan.actions:
+            card_class = urgency_class.get(action.urgency, "action-card-medium")
+            conf_cls = conf_badge.get(action.confidence, "conf-badge-low")
+            urg_cls = urgency_color.get(action.urgency, "urgency-medium")
+
+            st.markdown(
+                f"""
+                <div class="action-card {card_class}">
+                    <div class="action-rank">#{action.rank} · {action.action_type.replace('_', ' ').upper()} · 
+                        <span class="{urg_cls}">{action.urgency} Priority</span>
+                    </div>
+                    <div class="action-lever">🎯 {action.controllable_lever}</div>
+                    <div class="action-text">{action.action}</div>
+                    <div class="action-meta-grid">
+                        <div>
+                            <div class="action-meta-label">Driver</div>
+                            <div class="action-meta-val">{action.driver}</div>
+                        </div>
+                        <div>
+                            <div class="action-meta-label">Owner</div>
+                            <div class="action-meta-val">{action.owner}</div>
+                        </div>
+                        <div>
+                            <div class="action-meta-label">Expected Impact</div>
+                            <div class="action-meta-val">{action.expected_impact}</div>
+                        </div>
+                        <div>
+                            <div class="action-meta-label">Action Confidence</div>
+                            <div><span class="{conf_cls}">{action.confidence}</span></div>
+                        </div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            with st.expander(f"📋 Monitoring Plan & Evidence — #{action.rank}"):
+                st.markdown(f"**Monitoring Plan:** {action.monitoring_plan}")
+                st.markdown(f"**Confidence Rationale:** {action.confidence_rationale}")
+                if action.evidence_citations:
+                    st.markdown("**Evidence Citations:**")
+                    for cite in action.evidence_citations:
+                        st.caption(f"• {cite}")
+
+        st.caption(f"ℹ️ {action_plan.methodology_note}")
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with col_right:
         # Confidence Score Card
@@ -513,7 +667,7 @@ def main():
         st.progress(confidence_result.score / 100.0)
 
         if confidence_result.should_abstain:
-            st.error("⚠️ **System Abstaining**: Diagnostic confidence is below the 45% threshold. NarrateBI avoids hallucinations by requiring missing operational logs instead of guessing.", icon="🛑")
+            st.error("⚠️ **System Abstaining**: Diagnostic confidence is below the threshold. NarrateBI avoids hallucinations by requiring missing operational logs instead of guessing.", icon="🛑")
             if confidence_result.missing_evidence_hints:
                 st.markdown("**Required Evidence for Confirmation:**")
                 for hint in confidence_result.missing_evidence_hints:
@@ -522,6 +676,10 @@ def main():
             st.markdown("**Corroborating Confidence Factors:**")
             for factor in confidence_result.factors:
                 st.markdown(f"✓ {factor}")
+            if confidence_result.contradiction_notes:
+                st.warning("⚡ Conflicting signals detected:")
+                for note in confidence_result.contradiction_notes:
+                    st.caption(f"• {note}")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -540,13 +698,23 @@ def main():
         if not filtered_evidence:
             st.info("No operational evidence items linked to this scenario.")
         else:
+            contradictions = [e for e in filtered_evidence if getattr(e, 'contradiction_flag', False)]
+            if contradictions:
+                st.warning(
+                    f"⚠️ {len(contradictions)} contradictory evidence item(s) detected — "
+                    "confidence reduced. Conflicting signals are shown below.",
+                    icon="⚡"
+                )
             for item in filtered_evidence:
                 source_class = f"source-tag-{item.source.lower()}"
+                contradiction_style = "border-left: 3px solid #F59E0B; background: #FFFBEB;" if getattr(item, 'contradiction_flag', False) else ""
+                contradiction_label = " ⚡ CONTRADICTS STRUCTURED" if getattr(item, 'contradiction_flag', False) else ""
                 st.markdown(
                     f"""
-                    <div style="padding: 8px 0; border-bottom: 1px solid #F1F5F9; font-size:13px;">
+                    <div style="padding: 8px 0; border-bottom: 1px solid #F1F5F9; font-size:13px; {contradiction_style}">
                         <span class="source-tag {source_class}">{item.source}</span>
                         <span style="color:#334155;">{item.description}</span>
+                        <span style="color:#92400E; font-size:11px; font-weight:700;">{contradiction_label}</span>
                     </div>
                     """,
                     unsafe_allow_html=True,

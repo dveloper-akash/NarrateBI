@@ -2,7 +2,12 @@
 
 Provides a simple, reliable interface:
 retrieve_evidence(query, top_k=4, category=None)
-returning a list of relevant operational evidence objects.
+returning a list of relevant operational evidence objects ranked by relevance.
+
+Relevance is assigned deterministically from TF-style keyword scoring:
+- Score > 8  -> High
+- Score 3-8  -> Medium
+- Score < 3  -> Low
 """
 
 from pathlib import Path
@@ -113,13 +118,17 @@ def retrieve_evidence(
             
             desc = f"{title}: {summary_line}" if summary_line else title
 
+            score_val = _
+            relevance = "High" if score_val > 8 else "Medium" if score_val >= 3 else "Low"
             results.append(
                 EvidenceItem(
                     source=cat,
                     timestamp=timestamp,
                     description=desc,
-                    relevance="High" if _ > 2 else "Medium",
+                    relevance=relevance,
                     is_structured=False,
+                    evidence_type="rag_doc",
+                    affected_entity=doc.get("service", "unknown"),
                 )
             )
 

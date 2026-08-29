@@ -1,8 +1,10 @@
 {
   "scenario_id": "scenario_1_multifactor",
   "title": "Multi-factor Diagnosis (Payment Service Incident)",
-  "description": "Revenue dropped 11.6% driven by an 18.2% drop in conversion rate following a payment-service deployment.",
+  "description": "Analyze revenue KPI for Aug 22-28 vs Aug 15-21. A payment-service deployment occurred on Aug 24. Engine should discover the causal driver from data.",
   "target_kpi": "revenue",
+  "analysis_period": {"start": "2026-08-22", "end": "2026-08-28"},
+  "baseline_period": {"start": "2026-08-15", "end": "2026-08-21"},
   "has_sufficient_history": true,
-  "simulated_query": "payment gateway timeout errors and checkout failure deployment"
+  "simulated_query": "payment gateway timeout errors checkout failure deployment"
 }

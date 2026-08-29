@@ -1,8 +1,10 @@
 {
   "scenario_id": "scenario_3_new_kpi",
-  "title": "New KPI / Limited History (Cold Start)",
-  "description": "New Product Conversion has only 4 days of history. Engine must detect insufficient baseline data and abstain.",
+  "title": "New KPI / Limited Baseline (Cold Start)",
+  "description": "New Product Conversion launched Aug 25 — only 4 days of history. Engine must detect insufficient baseline and abstain from anomaly diagnosis.",
   "target_kpi": "new_product_conversion",
+  "analysis_period": {"start": "2026-08-22", "end": "2026-08-28"},
+  "baseline_period": {"start": "2026-08-15", "end": "2026-08-21"},
   "has_sufficient_history": false,
-  "simulated_query": "new product category conversion"
+  "simulated_query": "new product category launch conversion page views funnel"
 }
